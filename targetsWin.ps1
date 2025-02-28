@@ -21,4 +21,4 @@ $outputJson = $outputObject | ConvertTo-Json -Depth 3
 $outputJson = "[ $outputJson ]"
 
 # Guardar en archivo con UTF-8 sin BOM
-[System.IO.File]::WriteAllText("\\192.168.1.7\targets\outputWin.json", $outputJson, [System.Text.Encoding]::GetEncoding
+[System.IO.File]::WriteAllText("\\192.168.1.7\targets\outputWin.json", $outputJson, [System.Text.Encoding]::GetEncoding(28591))
