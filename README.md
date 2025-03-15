@@ -31,25 +31,14 @@ Clona el repositorio y accede a la carpeta del proyecto:
 git clone https://github.com/tu-usuario/titan-dock.git
 cd titan-dock
 
-Levanta los servicios usando Docker Compose:
-
-docker-compose up -d
 
 📊 Monitorización
 
-Titan Dock proporciona una interfaz completa para la supervisión del dominio. Para acceder a Grafana, abre tu navegador y dirígete a:
-
-http://localhost:3000
-
-Las métricas de Prometheus están disponibles en:
-
-http://localhost:9090
+Titan Dock proporciona una interfaz completa para la supervisión del dominio. 
 
 🖥️ Gestión de Imágenes con FOG
 
-Titan Dock integra FOG Project para facilitar la gestión de imágenes y despliegues. Puedes acceder a la interfaz de FOG en:
-
-http://localhost:8080/fog
+Titan Dock integra FOG Project para facilitar la gestión de imágenes y despliegues.
 
 🛠️ Configuración Avanzada
 
