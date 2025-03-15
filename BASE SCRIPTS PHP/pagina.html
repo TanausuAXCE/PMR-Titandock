@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TitanDock - Orquestación de Sistemas</title>
+    <link rel="stylesheet" href="css.css">
+    <script>
+        function showLogin() {
+            document.getElementById('splash').style.display = 'none';
+            document.getElementById('login-container').style.display = 'block';
+        }
+        function login() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+        }
+        setTimeout(showLogin, 3000);
+    </script>
+    <style>
+        #splash {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #222;
+            color: white;
+            font-size: 2em;
+        }
+        #login-container {
+            display: none;
+            text-align: center;
+            margin: 50px;
+        }
+        #main-content {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="splash">TitanDock</div>
+    <div id="login-container">
+        <h2>Iniciar sesión</h2>
+        <input type="text" placeholder="Usuario"><br>
+        <input type="password" placeholder="Contraseña"><br>
+        <button onclick="login()">Entrar</button>
+    </div>
+    <div id="main-content">
+        <header>
+            <h1>TitanDock</h1>
+            <p>La solución definitiva para la orquestación de sistemas con ADDS, Docker, Grafana, Prometheus y más.</p>
+        </header>
+        <nav>
+            <ul>
+                <li><a href="#about">Acerca de</a></li>
+                <li><a href="#features">Características</a></li>
+                <li><a href="#contact">Contacto</a></li>
+            </ul>
+        </nav>
+        <section id="about">
+            <h2>¿Qué es TitanDock?</h2>
+            <p>TitanDock es una potente herramienta de orquestación de sistemas que permite la gestión eficiente de entornos empresariales, combinando tecnologías como ADDS, Docker, Grafana y Prometheus.</p>
+        </section>
+        <section id="features">
+            <h2>Características</h2>
+            <ul>
+                <li>Integración con Active Directory Domain Services (ADDS)</li>
+                <li>Administración eficiente de contenedores con Docker</li>
+                <li>Monitoreo avanzado con Grafana y Prometheus</li>
+                <li>Escalabilidad y automatización</li>
+            </ul>
+        </section>
+        <section class="button-container">
+            <a href="#signin" class="button">Sign In</a>
+            <a href="#signup" class="button">Sign Up</a>
+        </section>
+        <section id="contact">
+            <h2>Contacto</h2>
+            <p>Para más información, escríbenos a: <a href="mailto:info@titandock.com">info@titandock.com</a></p>
+        </section>
+        <footer>
+            <p>&copy; 2025 TitanDock. Todos los derechos reservados.</p>
+        </footer>
+    </div>
+</body>
+</html>
