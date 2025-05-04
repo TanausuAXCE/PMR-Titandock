@@ -1,0 +1,617 @@
+<?php
+session_start(); // Inicia la sesión
+
+// Verificar si el usuario está autenticado
+if (!isset($_SESSION['usuario'])) {
+    header("Location: ../pages/login.php"); // Redirige si no está autenticado
+    exit();
+}
+
+$username = $_SESSION['usuario']; // Obtén el nombre del usuario desde la sesión
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TitanDock - Dashboard</title>
+    <style>
+        /* --- Estilos Base y Layout General --- */
+        body, html { margin: 0; padding: 0; height: 100%; display: flex; flex-direction: column; font-family: sans-serif; background-color: #f8f9fa; color: #212529; transition: background-color 0.3s, color 0.3s; }
+        main { flex: 1; overflow: auto; padding: 80px 20px 20px 20px; /* Padding superior para dejar espacio al header fijo */ }
+        iframe { width: 100%; height: calc(100vh - 60px); border: none; display: block; }
+
+        /* --- Header y Navbar --- */
+        header { position: fixed; top: 0; left: 0; width:100%; height: 60px; background-color: #343a40; color: white; z-index: 1050; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 0 20px; height: 100%; max-width: 1400px; margin: 0 auto; }
+        .logo { display: flex; align-items: center; cursor: pointer; } .logo img { height: 40px; margin-right: 10px; } .logo-text { font-size: 1.5em; font-weight: bold; color: white; }
+        .navbar-right { list-style: none; padding: 0; margin: 0; display: flex; align-items: center; gap: 15px; } .navbar-right li { margin-left: 0; }
+        .navbar-right a, .user-btn { color: white; text-decoration: none; padding: 8px 12px; border-radius: 4px; transition: background-color 0.3s; background: none; border: none; font-size: 1em; cursor: pointer; }
+        .navbar-right a:hover, .user-btn:hover { background-color: #495057; } .user-info { position: relative; } .user-btn { background-color: #007bff; } .user-btn:hover { background-color: #0056b3; }
+        .dropdown-content { display: none; position: absolute; background-color: #f9f9f9; min-width: 160px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1; right: 0; border-radius: 4px; overflow: hidden; }
+        .dropdown-content a { color: black; padding: 12px 16px; text-decoration: none; display: block; font-size: 0.95em; } .dropdown-content a:hover { background-color: #e9ecef; } .show { display: block; }
+
+        /* --- Theme Toggle Switch --- */
+        .theme-toggle { display: flex; align-items: center; } .switch { position: relative; display: inline-block; width: 50px; height: 24px; } .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #007bff; } input:checked + .slider:before { transform: translateX(26px); }
+
+        /* --- Contenido Principal: Bloque Bienvenida y Secciones Horizontales --- */
+        .welcome-block { text-align: center; margin-bottom: 30px; padding: 15px; background-color: #ffffff; border-radius: 8px; border: 1px solid #dee2e6; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .welcome-block h2 { margin-top: 0; color: #343a40; } .welcome-block p { color: #6c757d; }
+
+        .sections-container { /* Contenedor para las secciones */
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px; /* Espacio ENTRE secciones */
+            align-items: flex-start; /* Alinea secciones arriba */
+        }
+        .management-section { /* Cada sección (Usuarios, Grupos, Monitor) */
+            flex: 1; /* Ocupan espacio equitativamente */
+            min-width: 320px; /* Ancho mínimo antes de bajar de línea */
+            box-sizing: border-box; margin-bottom: 20px; padding: 20px; background-color: #ffffff; border-radius: 8px; border: 1px solid #dee2e6; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .management-section h3 { margin-top: 0; margin-bottom: 25px; padding-bottom: 10px; border-bottom: 2px solid #e9ecef; color: #495057; text-align: left; font-size: 1.3em; }
+        .action-box-container { /* Contenedor de las cajas DENTRO de una sección */
+            display: flex; flex-wrap: wrap; gap: 15px; justify-content: flex-start;
+        }
+        .management-section .action-box { /* Cajas de acción individuales DENTRO de sección */
+            margin: 0; flex: 1 1 180px; min-width: 160px; background-color: #f8f9fa; text-align: center; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .management-section .action-box h4 { margin: 0 0 15px 0; font-size: 1.05em; color: #343a40; font-weight: 600; }
+        .management-section .action-box button { padding: 8px 15px; font-size: 0.95em; width: 100%; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; }
+        .management-section .action-box button:hover { background-color: #0056b3; }
+        .management-section .action-box button[data-action="delete-user"], .management-section .action-box button[data-action="delete-group"] { background-color: #dc3545; border-color: #dc3545; }
+        .management-section .action-box button[data-action="delete-user"]:hover, .management-section .action-box button[data-action="delete-group"]:hover { background-color: #c82333; border-color: #bd2130;}
+
+        /* --- Estilos Modales --- */
+        .modal { display: none; position: fixed; z-index: 1100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); overflow: auto; padding-top: 50px; }
+        .modal-content { background-color: #fff; margin: 5% auto 15% auto; padding: 25px 30px; border-radius: 8px; width: 90%; max-width: 650px; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from {opacity: 0; transform: translateY(-20px);} to {opacity: 1; transform: translateY(0);} }
+        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 35px; color: #aaa; cursor: pointer; line-height: 1; font-weight: bold; transition: color 0.2s; }
+        .close-btn:hover { color: #777; }
+        .modal-content ul { list-style: none; padding: 0; margin-top: 15px; max-height: 350px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; }
+        .modal-content li { padding: 10px 15px; font-size: 1em; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .modal-content li:last-child { border-bottom: none; }
+        .modal-content li button { padding: 5px 10px; font-size: 0.9em; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; transition: background-color 0.3s; }
+        .modal-content li button[onclick*="showEditUserForm"] {background-color: #28a745 !important; border-color: #1f6f2a !important; color: white !important;}
+        .modal-content li button[onclick*="showEditUserForm"]:hover {background-color: #218838 !important; border-color: #1a6f2c !important;}
+        .modal-content li button[onclick*="confirmUserDeletion"], .modal-content li button[onclick*="confirmGroupDeletion"] { background-color: #dc3545; } .modal-content li button[onclick*="confirmUserDeletion"]:hover, .modal-content li button[onclick*="confirmGroupDeletion"]:hover { background-color: #c82333; }
+        .modal-content li button.view-members-btn { background-color: #17a2b8; } .modal-content li button.view-members-btn:hover { background-color: #138496; }
+        /* Div contenedor para el contenido dinámico en modales de lista (para facilitar la actualización) */
+        .modal-list-content { margin-top: 15px; }
+        /* Estilo específico para el contenedor de la lista de miembros (puede heredar de modal-list-content o ser específico) */
+        #member-list-container { margin-top: 15px; }
+        .modal-content form { margin-top: 20px; } .modal-content label { display: block; margin-bottom: 5px; font-weight: 600; color: #495057; font-size: 0.95em; }
+        .modal-content input[type="text"], .modal-content input[type="password"], .modal-content input[type="email"], .modal-content select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1em; box-sizing: border-box; }
+        .modal-content select { appearance: none; background-repeat: no-repeat; background-position: right .7em top 50%; background-size: .65em auto; padding-right: 2em; /* background-image: url('...'); */ }
+        .modal-content form button[type="button"] { padding: 12px 25px; font-size: 1em; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; margin-top: 10px; }
+        .modal-content form button[type="button"]:hover { background-color: #0056b3; }
+        .modal-content div[id$="-message"] button { margin-top: 10px; padding: 8px 15px; font-size: 0.95em; } .modal-content div[id$="-message"] button[onclick*="submitDelete"] { background-color: #dc3545; color: white; } .modal-content div[id$="-message"] button[onclick*="submitDelete"]:hover { background-color: #c82333; } .modal-content div[id$="-message"] button[onclick*="clearModalMessage"] { background-color: #6c757d; color: white; } .modal-content div[id$="-message"] button[onclick*="clearModalMessage"]:hover { background-color: #5a6268; }
+        [id$="-message"] { margin-top: 15px; font-weight: bold; padding: 10px; border-radius: 4px; display: none; border: 1px solid transparent; }
+        [id$="-message"][style*="color: green"] { background-color: #d1e7dd; border-color: #badbcc; color: #0f5132; display: block; }
+        [id$="-message"][style*="color: red"] { background-color: #f8d7da; border-color: #f5c2c7; color: #842029; display: block; }
+        [id$="-message"]:not([style*="color"]) { background-color: #cfe2ff; border-color: #b6d4fe; color: #084298; display: block; }
+
+
+        /* --- Estilos Modo Oscuro --- */
+        body.dark-mode { background-color: #212529; color: #dee2e6; } body.dark-mode main { background-color: #2c3034; } body.dark-mode header { background-color: #1a1d20; border-bottom: 1px solid #495057; }
+        body.dark-mode .navbar-right a, body.dark-mode .user-btn { color: #dee2e6; } body.dark-mode .navbar-right a:hover, body.dark-mode .user-btn:hover { background-color: #495057; } body.dark-mode .logo-text { color: #dee2e6; }
+        body.dark-mode .welcome-block { background-color: #343a40; border-color: #495057; } body.dark-mode .welcome-block h2 { color: #f8f9fa; } body.dark-mode .welcome-block p { color: #adb5bd; }
+        body.dark-mode .management-section { background-color: #343a40; border-color: #495057; } body.dark-mode .management-section h3 { color: #dee2e6; border-bottom-color: #495057; }
+        body.dark-mode .management-section .action-box { background-color: #495057; border-color: #6c757d; } body.dark-mode .management-section .action-box h4 { color: #f8f9fa; }
+        body.dark-mode .modal-content { background-color: #495057; color: #dee2e6; border: 1px solid #6c757d;} body.dark-mode .close-btn { color: #adb5bd; } body.dark-mode .close-btn:hover { color: #f8f9fa; }
+        body.dark-mode .modal-content ul { border-color: #6c757d; } body.dark-mode .modal-content li { border-bottom-color: #5a6268; } body.dark-mode .modal-content label { color: #ced4da; }
+        body.dark-mode .modal-content input[type="text"], body.dark-mode .modal-content input[type="password"], body.dark-mode .modal-content input[type="email"], body.dark-mode .modal-content select { background-color: #6c757d; border-color: #adb5bd; color: #f8f9fa; }
+        body.dark-mode [id$="-message"][style*="color: green"] { background-color: #0f5132; border-color: #1a6c41; color: #a3cfbb; } body.dark-mode [id$="-message"][style*="color: red"] { background-color: #842029; border-color: #9f2d38; color: #f5c2c7; } body.dark-mode [id$="-message"]:not([style*="color"]) { background-color: #084298; border-color: #0a58ca; color: #b6d4fe; }
+        body.dark-mode .dropdown-content { background-color: #495057; border: 1px solid #6c757d;} body.dark-mode .dropdown-content a { color: #dee2e6; } body.dark-mode .dropdown-content a:hover { background-color: #6c757d; }
+        body.dark-mode .slider { background-color: #6c757d; } body.dark-mode input:checked + .slider { background-color: #0d6efd; } body.dark-mode .slider:before { background-color: #343a40; }
+
+    </style>
+</head>
+<body class="<?php echo isset($_COOKIE['theme']) && $_COOKIE['theme'] === 'dark' ? 'dark-mode' : ''; ?>">
+    <header>
+        <nav class="navbar">
+            <div class="logo" id="home-link" title="Volver al inicio del Dashboard">
+                <img src="../assets/logo.png" alt="Logo TitanDock" id="logo">
+                <span class="logo-text">TitanDock</span>
+            </div>
+            <ul class="navbar-right">
+                <li class="theme-toggle">
+                    <label for="theme-switch" class="switch" title="Cambiar tema claro/oscuro">
+                        <input type="checkbox" id="theme-switch" <?php echo isset($_COOKIE['theme']) && $_COOKIE['theme'] === 'dark' ? 'checked' : ''; ?>>
+                        <span class="slider"></span>
+                    </label>
+                </li>
+                <li class="user-info">
+                    <button id="user-name-btn" class="user-btn">
+                        <?php echo htmlspecialchars($username); ?> &#9662;
+                    </button>
+                    <div id="user-dropdown" class="dropdown-content">
+                        <a href="../php/logout.php">Cerrar Sesión</a>
+                    </div>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main id="main-content">
+        <section id="dashboard-home">
+
+            <div class="welcome-block">
+                <h2>Bienvenido, <?php echo htmlspecialchars($username); ?>!</h2>
+                <p>Gestiona usuarios, grupos y visualiza métricas.</p>
+            </div>
+
+            <div class="sections-container">
+
+                <div class="management-section">
+                    <h3>Gestión de Usuarios</h3>
+                    <div class="action-box-container">
+                        <div class="action-box"><h4>Crear usuario</h4><button class="action-btn" data-action="create">Crear usuario</button></div>
+                        <div class="action-box"><h4>Ver usuarios</h4><button class="action-btn" data-action="view">Ver usuarios</button></div>
+                        <div class="action-box"><h4>Modificar usuario</h4><button class="action-btn" data-action="modify">Modificar usuario</button></div>
+                        <div class="action-box"><h4>Eliminar usuario</h4><button class="action-btn" data-action="delete-user">Eliminar usuario</button></div>
+                    </div>
+                </div>
+                <div class="management-section">
+                    <h3>Gestión de Grupos</h3>
+                     <div class="action-box-container">
+                        <div class="action-box"><h4>Crear grupo</h4><button class="action-btn" data-action="create-group">Crear grupo</button></div>
+                        <div class="action-box"><h4>Ver grupos</h4><button class="action-btn" data-action="view-groups">Ver / Ver miembros</button></div>
+                        <div class="action-box"><h4>Eliminar grupo</h4><button class="action-btn" data-action="delete-group">Eliminar grupo</button></div>
+                    </div>
+                </div>
+                <div class="management-section">
+                    <h3>Monitorización</h3>
+                     <div class="action-box-container">
+                         <div class="action-box"><h4>Abrir Prometheus</h4><button class="action-btn" id="prometheus-action-btn">Prometheus</button></div>
+                         <div class="action-box"><h4>Abrir Grafana</h4><button class="action-btn" id="grafana-action-btn">Grafana</button></div>
+                         <div class="action-box"><h4>Abrir FOG Project</h4><button class="action-btn" id="fog-action-btn">FOG Project</button></div>
+                         <div class="action-box"><h4>Ver equipos</h4><button class="action-btn" data-action="view-computers">Ver equipos</button></div>
+                     </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- Funciones Auxiliares ---
+        function setCookie(name, value, days) { const d = new Date(); d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000)); const expires = "expires=" + d.toUTCString(); document.cookie = name + "=" + value + ";" + expires + ";path=/"; }
+        function getCookie(name) { const dc = decodeURIComponent(document.cookie); const ca = dc.split(';'); const n = name + "="; for(let i = 0; i <ca.length; i++) { let c = ca[i].trim(); if (c.indexOf(n) == 0) { return c.substring(n.length, c.length); } } return ""; }
+        function isDarkMode() { return document.body.classList.contains('dark-mode'); }
+        function closeModal(modalId) { const modal = document.getElementById(modalId); if (modal) { modal.style.display = "none"; setTimeout(() => { if(modal) modal.remove(); }, 300); /* Retraso para animación si se añade */ } }
+        function showModalMessage(modalId, message, isSuccess) { const msgId = modalId.replace('-modal', '-message'); const div = document.getElementById(msgId); if(div) { div.textContent = message; div.style.color = isSuccess === null ? '' : (isSuccess ? 'green' : 'red'); /* Null para color por defecto */ div.style.display = 'block'; } else { console.warn("Msg div not found:", msgId + " for modal " + modalId); alert(message); } }
+        function clearModalMessage(modalId) { const msgId = modalId.replace('-modal', '-message'); const div = document.getElementById(msgId); if (div) { div.innerHTML = ''; div.style.display = 'none'; } const listId = modalId.includes('delete') ? modalId.replace('-message', '-selection-list') : null; if(listId) { const listDiv = document.getElementById(listId); if(listDiv && listDiv.style.display==='none') listDiv.style.display = 'block'; } }
+
+        // --- Funciones para Modales Específicos ---
+
+        /**
+         * Muestra un modal genérico para listas o contenido simple.
+         * @param {string} contentHtml HTML interno del modal.
+         * @param {string} title Título del modal.
+         * @param {string} [modalId='generic-list-modal'] ID opcional para el modal. Permite tener múltiples modales de lista sin interferencia.
+         */
+        // #region MODIFICACIÓN: showListModal acepta ID opcional
+        function showListModal(contentHtml, title = "Lista", modalId = 'generic-list-modal') {
+            const id = modalId; // Usa el ID proporcionado o el genérico por defecto
+            closeModal(id); // Cierra cualquier modal existente CON ESTE ID específico
+
+            // Añadimos un div contenedor '.modal-list-content' para facilitar la actualización del contenido después
+            const fullContentHtml = `<div class="modal-list-content">${contentHtml}</div>`;
+
+            const html = `<div id="${id}" class="modal ${isDarkMode()?'dark-mode':''}"><div class="modal-content"><span class="close-btn" onclick="closeModal('${id}')">&times;</span><h3>${title}</h3>${fullContentHtml}</div></div>`;
+            document.body.insertAdjacentHTML('beforeend', html);
+            const newModal = document.getElementById(id);
+            if (newModal) {
+                newModal.style.display = "block";
+                // Aplicar modo oscuro si es necesario al nuevo modal
+                newModal.classList.toggle('dark-mode', isDarkMode());
+            } else {
+                console.error(`Error: No se pudo crear o encontrar el modal con ID: ${id}`);
+            }
+        }
+        // #endregion
+
+        function showCreateUserModal() {const id='create-user-modal';closeModal(id); const html = `<div id="${id}" class="modal ${isDarkMode()?'dark-mode':''}"><div class="modal-content"><span class="close-btn" onclick="closeModal('${id}')">&times;</span><h3>Crear Nuevo Usuario</h3><form id="create-user-form" onsubmit="return false;"><label for="new_username">Nombre de usuario:</label><input type="text" id="new_username" name="username" required><label for="new_password">Contraseña:</label><input type="password" id="new_password" name="password" required autocomplete="new-password"><label for="new_group">Grupo (opcional):</label><input type="text" id="new_group" name="group"><label for="new_ou">OU (opcional):</label><input type="text" id="new_ou" name="ou"><button type="button" onclick="submitCreateUserForm()">Crear Usuario</button></form><div id="create-user-message"></div></div></div>`; document.body.insertAdjacentHTML('beforeend', html); const m = document.getElementById(id); if(m) { m.style.display="block"; m.classList.toggle('dark-mode', isDarkMode());} }
+        function showModifyUserModal(users) { const id='modify-user-modal'; closeModal(id); let list='<ul>'; if(users && users.length>0) { users.forEach(u => { const s=u.replace(/</g,"&lt;"); const e=s.replace(/'/g,"\\'").replace(/"/g,'&quot;'); list+=`<li>${s} <button onclick="showEditUserForm('${e}')">Modificar</button></li>`; }); } else { list+='<li>No hay usuarios para modificar.</li>'; } list+='</ul>'; const html=`<div id="${id}" class="modal ${isDarkMode()?'dark-mode':''}"><div class="modal-content"><span class="close-btn" onclick="closeModal('${id}')">&times;</span><h3>Seleccionar usuario a modificar</h3><div id="user-selection-list">${list}</div><div id="edit-user-message"></div></div></div>`; document.body.insertAdjacentHTML('beforeend', html); const m = document.getElementById(id); if(m) { m.style.display="block"; m.classList.toggle('dark-mode', isDarkMode());} }
+        function showEditUserForm(username) { const id='modify-user-modal'; const modal = document.getElementById(id); if(!modal) return; clearModalMessage(id); const formHtml = `<form id="edit-user-form" onsubmit="return false;"><input type="hidden" name="username" value="${username}"><label for="edit_password">Nueva Contraseña (no cambiar si vacío):</label><input type="password" id="edit_password" name="password" autocomplete="new-password"><label for="edit_description">Descripción:</label><input type="text" id="edit_description" name="description"><label for="edit_group">Grupo Principal (opcional):</label><input type="text" id="edit_group" name="group"><button type="button" onclick="submitEditUserForm()">Guardar Cambios</button></form><div id="edit-user-message"></div>`; const content = modal.querySelector('.modal-content'); if(content) { const closeBtn = content.querySelector('.close-btn').outerHTML; content.innerHTML = `${closeBtn}<h3>Modificar Usuario: ${username.replace(/</g,"&lt;")}</h3>${formHtml}`; } }
+        function showCreateGroupModal() { const id='create-group-modal'; closeModal(id); const html = `<div id="${id}" class="modal ${isDarkMode()?'dark-mode':''}"><div class="modal-content"><span class="close-btn" onclick="closeModal('${id}')">&times;</span><h3>Crear Nuevo Grupo</h3><form id="create-group-form" onsubmit="return false;"><label for="new_group_name">Nombre Grupo (SamAccountName):</label><input type="text" id="new_group_name" name="group_name" required><label for="new_group_scope">Ámbito:</label><select id="new_group_scope" name="group_scope" required><option value="DomainLocal">Local Dominio</option><option value="Global" selected>Global</option><option value="Universal">Universal</option></select><label for="new_group_category">Tipo:</label><select id="new_group_category" name="group_category" required><option value="Security" selected>Seguridad</option><option value="Distribution">Distribución</option></select><label for="new_group_description">Descripción (opcional):</label><input type="text" id="new_group_description" name="description"><label for="new_group_path">Ruta OU (opcional):</label><input type="text" id="new_group_path" name="path" placeholder="Default si vacío"><button type="button" onclick="submitCreateGroupForm()">Crear Grupo</button></form><div id="create-group-message"></div></div></div>`; document.body.insertAdjacentHTML('beforeend', html); const m = document.getElementById(id); if(m) { m.style.display="block"; m.classList.toggle('dark-mode', isDarkMode());} }
+        function showDeleteUserSelectionModal(users) { const id='delete-user-modal'; closeModal(id); let list='<ul>'; if(users && users.length>0) { users.forEach(u => { const s=u.replace(/</g,"&lt;"); const e=s.replace(/'/g,"\\'").replace(/"/g,'&quot;'); list+=`<li>${s} <button onclick="confirmUserDeletion('${e}')">Eliminar</button></li>`; }); } else { list+='<li>No hay usuarios para eliminar.</li>'; } list+='</ul>'; const html=`<div id="${id}" class="modal ${isDarkMode()?'dark-mode':''}"><div class="modal-content"><span class="close-btn" onclick="closeModal('${id}')">&times;</span><h3>Seleccionar usuario a ELIMINAR</h3><p style="color:red;font-weight:bold;">Atención: Acción permanente.</p><div id="user-delete-selection-list">${list}</div><div id="delete-user-message"></div></div></div>`; document.body.insertAdjacentHTML('beforeend', html); const m = document.getElementById(id); if(m) { m.style.display="block"; m.classList.toggle('dark-mode', isDarkMode());} }
+        function showDeleteGroupSelectionModal(groups) { const id='delete-group-modal'; closeModal(id); let list='<ul>'; if(groups && groups.length>0) { groups.forEach(g => { const s=g.replace(/</g,"&lt;"); const e=s.replace(/'/g,"\\'").replace(/"/g,'&quot;'); list+=`<li>${s} <button onclick="confirmGroupDeletion('${e}')">Eliminar</button></li>`; }); } else { list+='<li>No hay grupos para eliminar.</li>'; } list+='</ul>'; const html=`<div id="${id}" class="modal ${isDarkMode()?'dark-mode':''}"><div class="modal-content"><span class="close-btn" onclick="closeModal('${id}')">&times;</span><h3>Seleccionar grupo a ELIMINAR</h3><p style="color:red;font-weight:bold;">Atención: Puede afectar permisos.</p><div id="group-delete-selection-list">${list}</div><div id="delete-group-message"></div></div></div>`; document.body.insertAdjacentHTML('beforeend', html); const m = document.getElementById(id); if(m) { m.style.display="block"; m.classList.toggle('dark-mode', isDarkMode());} }
+
+        // --- Funciones de Confirmación ---
+        function confirmUserDeletion(username) { const id='delete-user-modal'; const div=document.getElementById('delete-user-message'); if(!div) return; const safeHtml=username.replace(/</g,"&lt;"); const safeJs=username.replace(/'/g,"\\'").replace(/"/g,'&quot;'); div.innerHTML = `<p><strong>¿Estás SEGURO de eliminar a '${safeHtml}'?</strong></p><p style="color:red;"><strong>¡NO SE PUEDE DESHACER!</strong></p><button type="button" style="background-color:#dc3545;color:white;" onclick="submitDeleteUser('${safeJs}')">Sí, Eliminar</button> <button type="button" style="background-color:#6c757d;color:white;margin-left:10px;" onclick="clearModalMessage('${id}')">Cancelar</button>`; div.style.color='red'; div.style.display='block'; const listDiv = document.getElementById('user-delete-selection-list'); if(listDiv) listDiv.style.display = 'none'; }
+        function confirmGroupDeletion(groupName) { const id='delete-group-modal'; const div=document.getElementById('delete-group-message'); if(!div) return; const safeHtml=groupName.replace(/</g,"&lt;"); const safeJs=groupName.replace(/'/g,"\\'").replace(/"/g,'&quot;'); div.innerHTML = `<p><strong>¿Estás SEGURO de eliminar el grupo '${safeHtml}'?</strong></p><p style="color:red;"><strong>¡Puede afectar permisos!</strong></p><button type="button" style="background-color:#dc3545;color:white;" onclick="submitDeleteGroup('${safeJs}')">Sí, Eliminar</button> <button type="button" style="background-color:#6c757d;color:white;margin-left:10px;" onclick="clearModalMessage('${id}')">Cancelar</button>`; div.style.color='red'; div.style.display='block'; const listDiv = document.getElementById('group-delete-selection-list'); if(listDiv) listDiv.style.display = 'none'; }
+
+        // --- Funciones AJAX (Fetch) ---
+        function fetchUsers(action) { fetch("../php/get_users.php").then(r=>r.ok?r.json():r.text().then(t=>Promise.reject(new Error(`HTTP ${r.status}: ${t}`)))).then(users=>{ if(!Array.isArray(users))throw new Error("Invalid user response"); if(action==='view'){let l='<ul>';if(users.length>0)users.forEach(u=>l+=`<li>${u.replace(/</g,"&lt;")}</li>`);else l+='<li>No se encontraron usuarios.</li>';l+='</ul>';showListModal(l,"Usuarios del Dominio");} else if(action==='modify'){showModifyUserModal(users);} else if(action==='delete'){showDeleteUserSelectionModal(users);} }).catch(e=>{console.error("fetchUsers:",e);showListModal(`<p style="color:red">Error al obtener usuarios: ${e.message}</p>`,"Error");}); }
+        function fetchGroups(action='view') { fetch("../php/get_groups.php").then(r=>r.ok?r.json():r.text().then(t=>Promise.reject(new Error(`HTTP ${r.status}: ${t}`)))).then(groups=>{ if(typeof groups==='object'&&groups!==null&&!Array.isArray(groups)&&groups.error){throw new Error(groups.error);} if(!Array.isArray(groups)){throw new Error("Invalid group response.");} if(action==='view'){let l='<ul>';if(groups.length>0)groups.forEach(g=>{const s=g.replace(/</g,"&lt;"); const e=s.replace(/'/g,"\\'").replace(/"/g,'&quot;'); l+=`<li>${s} <button class="view-members-btn" onclick="fetchGroupMembers('${e}')">Ver miembros</button></li>`;});else l+='<li>No se encontraron grupos.</li>';l+='</ul>';showListModal(l,"Grupos (Click para ver miembros)"); /* Usa ID genérico por defecto */} else if(action==='delete'){showDeleteGroupSelectionModal(groups);} }).catch(e=>{console.error("fetchGroups:",e);showListModal(`<p style="color:red">Error al obtener grupos: ${e.message}</p>`,"Error");}); }
+
+
+        // #region MODIFICACIÓN: fetchGroupMembers y helper fetchAndDisplayMembers
+        /**
+         * Inicia la carga de miembros de un grupo, actualizando el modal genérico existente.
+         * @param {string} groupName Nombre del grupo.
+         */
+        function fetchGroupMembers(groupName) {
+            const modalId = 'generic-list-modal'; // ID del modal de lista genérico
+            const modal = document.getElementById(modalId);
+            const safeGroupNameHtml = groupName.replace(/</g,"&lt;");
+            const title = `Miembros de: ${safeGroupNameHtml}`;
+
+            // 1. Verificar si el modal genérico existe y está visible
+            if (!modal || modal.style.display === 'none') {
+                console.warn("fetchGroupMembers: Modal genérico no encontrado o no visible. Reabriendo.");
+                // Si no existe, lo muestra directamente con "Cargando..."
+                 showListModal("<p>Cargando miembros...</p>", title, modalId); // Usa el ID genérico
+                 // Llama a fetch real después de asegurar que el modal existe
+                 fetchAndDisplayMembers(groupName, title);
+                return;
+            }
+
+            // 2. Encontrar elementos dentro del modal existente
+            const modalContent = modal.querySelector('.modal-content');
+            if (!modalContent) {
+                 console.error("fetchGroupMembers: No se encontró .modal-content en el modal genérico.");
+                 modal.innerHTML += '<p style="color:red;">Error interno al buscar contenido.</p>';
+                 return;
+            }
+            const titleElement = modalContent.querySelector('h3');
+
+            // Busca o crea el contenedor específico para la lista de miembros dentro del modal genérico
+            let listContainer = modalContent.querySelector('#member-list-container');
+             if (!listContainer) {
+                 console.log("Creando #member-list-container dentro de #generic-list-modal");
+                 // Eliminar contenido anterior (la lista de grupos)
+                 const existingList = modalContent.querySelector('.modal-list-content'); // Busca el div contenedor general
+                 if(existingList) existingList.innerHTML = ''; // Vacía el contenedor general
+
+                 // Crear el contenedor específico para miembros
+                 listContainer = document.createElement('div');
+                 listContainer.id = 'member-list-container'; // ID específico para miembros
+                 listContainer.className = 'modal-list-content'; // Usa la misma clase para estilos
+
+                 // Insertar después del título o al final
+                 if(titleElement) {
+                     titleElement.parentNode.insertBefore(listContainer, titleElement.nextSibling);
+                 } else {
+                     modalContent.appendChild(listContainer);
+                 }
+             }
+
+            // 3. Actualizar título y mostrar "Cargando..."
+            if (titleElement) {
+                titleElement.textContent = title;
+            }
+             // Asegura que el contenedor de miembros esté vacío antes de poner "Cargando"
+             listContainer.innerHTML = '<p>Cargando miembros...</p>';
+
+            // 4. Llamar a la función que hace el fetch y actualiza este contenedor
+            fetchAndDisplayMembers(groupName, title, listContainer);
+        }
+
+        /**
+         * Función auxiliar: Realiza el fetch de miembros y actualiza el DOM.
+         * @param {string} groupName Nombre del grupo.
+         * @param {string} title Título para el modal (ya actualizado).
+         * @param {HTMLElement} [listContainer] El elemento contenedor donde mostrar los resultados (opcional, se buscará si no se pasa).
+         */
+        function fetchAndDisplayMembers(groupName, title, listContainer) {
+            const modalId = 'generic-list-modal'; // El ID del modal que estamos actualizando
+
+            // Si listContainer no se pasó, intenta encontrarlo (caso de recreación del modal)
+            if (!listContainer) {
+                console.log("fetchAndDisplayMembers buscando listContainer...");
+                const modal = document.getElementById(modalId);
+                if (modal && modal.style.display !== 'none') {
+                    const modalContent = modal.querySelector('.modal-content');
+                    if (modalContent) {
+                         listContainer = modalContent.querySelector('#member-list-container');
+                    }
+                }
+            }
+
+            // Si AÚN no se encuentra el contenedor, es un error grave
+             if (!listContainer) {
+                 console.error("fetchAndDisplayMembers: No se pudo encontrar o crear #member-list-container.");
+                 // Muestra un error en un nuevo modal genérico como último recurso
+                 showListModal(`<p style="color:red">Error crítico al preparar la visualización de miembros.</p>`, "Error", modalId);
+                 return;
+             }
+
+            // Preparar y realizar la petición Fetch
+            const formData = new FormData();
+            formData.append('group_name', groupName);
+
+            fetch('../php/get_group_members.php', { method: 'POST', body: formData })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(members => {
+                    // Procesar la respuesta y generar HTML de la lista
+                    if (!Array.isArray(members)) {
+                        if (typeof members === 'object' && members !== null && members.error) {
+                            throw new Error(members.error);
+                        }
+                        throw new Error("Respuesta inválida del servidor (se esperaba lista de miembros).");
+                    }
+
+                    let membersHtml = '<ul>';
+                    if (members.length > 0) {
+                        members.forEach(member => {
+                            membersHtml += `<li>${member.replace(/</g,"&lt;")}</li>`;
+                        });
+                    } else {
+                        membersHtml += '<li>Este grupo no tiene miembros.</li>';
+                    }
+                    membersHtml += '</ul>';
+
+                    // Actualizar el contenedor específico con la lista final
+                    listContainer.innerHTML = membersHtml;
+                })
+                .catch(error => {
+                    // Manejar errores y mostrar en el contenedor específico
+                    console.error("fetchGroupMembers Error:", error);
+                    listContainer.innerHTML = `<p style="color:red">Error al cargar miembros: ${error.message}</p>`;
+                });
+        }
+        // #endregion
+
+
+        // #region MODIFICACIÓN: fetchComputers usa ID único y actualiza contenido
+        /**
+         * Obtiene y muestra la lista de equipos en un modal dedicado.
+         */
+        function fetchComputers() {
+            const modalId = 'computer-list-modal'; // <<< ID ÚNICO para el modal de equipos
+            const modalTitle = "Equipos del Dominio";
+
+            // 1. Mostrar modal inicial con "Cargando..." usando el ID único.
+            //    La función showListModal se encarga de cerrar modales anteriores con ESTE MISMO ID.
+            showListModal("<p>Cargando equipos...</p>", modalTitle, modalId);
+
+            // 2. Realizar la petición Fetch
+            fetch("../php/get_computers.php")
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                           throw new Error(`Error HTTP ${response.status}: ${text || response.statusText}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(computers => {
+                    // 3. Validar respuesta
+                    if (!Array.isArray(computers)) {
+                        if (typeof computers === 'object' && computers !== null && computers.error) {
+                            throw new Error(computers.error);
+                        }
+                       throw new Error("Respuesta inválida del servidor (se esperaba lista de equipos).");
+                    }
+
+                    // 4. Generar HTML de la lista
+                    let computerListHtml = '<ul>';
+                    if (computers.length > 0) {
+                        computers.forEach(computer => {
+                               const safeComputer = computer.replace(/</g,"&lt;").replace(/>/g, "&gt;");
+                               computerListHtml += `<li>${safeComputer}</li>`;
+                        });
+                    } else {
+                        computerListHtml += '<li>No se encontraron equipos.</li>';
+                    }
+                    computerListHtml += '</ul>';
+
+                    // 5. Buscar el modal por su ID único y actualizar su contenido interno.
+                    const modal = document.getElementById(modalId);
+                    if (modal && modal.style.display !== 'none') {
+                        // Busca el div contenedor '.modal-list-content' añadido por showListModal
+                        const contentArea = modal.querySelector('.modal-list-content');
+                        if (contentArea) {
+                            contentArea.innerHTML = computerListHtml; // Actualiza solo el contenido
+                        } else {
+                            console.error("fetchComputers: No se encontró .modal-list-content para actualizar.");
+                            // Fallback: Si no se encuentra el div, se recrea el modal (menos eficiente)
+                            showListModal(computerListHtml, modalTitle, modalId);
+                        }
+                    } else {
+                         console.warn(`WorkspaceComputers: El modal ${modalId} no se encontró o no está visible para actualizar. Se mostrará de nuevo.`);
+                         // Si el modal fue cerrado por el usuario mientras cargaba, lo muestra de nuevo.
+                           showListModal(computerListHtml, modalTitle, modalId);
+                    }
+                })
+                .catch(error => {
+                    // 6. Manejar errores: Buscar el modal y mostrar el error dentro.
+                    console.error("fetchComputers Error:", error);
+                    const modal = document.getElementById(modalId);
+                     const errorHtml = `<p style="color:red">Error al cargar equipos: ${error.message}</p>`;
+
+                    if (modal && modal.style.display !== 'none') {
+                        const contentArea = modal.querySelector('.modal-list-content');
+                        if (contentArea) {
+                            contentArea.innerHTML = errorHtml;
+                        } else {
+                             console.error("fetchComputers: No se encontró .modal-list-content para mostrar error.");
+                             // Fallback: Recrear modal con error
+                              showListModal(errorHtml, "Error al cargar Equipos", modalId);
+                        }
+                    } else {
+                        // Si el modal no existe o fue cerrado, muestra uno nuevo con el error.
+                        showListModal(errorHtml, "Error al cargar Equipos", modalId);
+                    }
+                });
+        }
+        // #endregion
+
+
+        // --- Funciones AJAX (Submit) ---
+        function submitCreateUserForm() { const id='create-user-modal'; const f=document.getElementById('create-user-form'); if(!f) return; const d=new FormData(f); showModalMessage(id,'Creando...', null); fetch('../php/create_user.php',{method:'POST',body:d}).then(r=>r.json()).then(data=>{showModalMessage(id,data.message||(data.success?'Usuario creado con éxito':'Error al crear usuario'),data.success);if(data.success)f.reset();}).catch(e=>{console.error(e);showModalMessage(id,'Error de comunicación al crear usuario.',false);}); }
+        function submitEditUserForm() { const id='modify-user-modal'; const f=document.getElementById('edit-user-form'); if(!f) return; const d=new FormData(f); showModalMessage(id,'Guardando cambios...', null); fetch('../php/modify_user.php',{method:'POST',body:d}).then(r=>r.json()).then(data=>{showModalMessage(id,data.message||(data.success?'Cambios guardados con éxito':'Error al guardar cambios'),data.success); /* No cerrar modal automáticamente */}).catch(e=>{console.error(e);showModalMessage(id,'Error de comunicación al modificar usuario.',false);}); }
+        function submitCreateGroupForm() { const id='create-group-modal'; const f=document.getElementById('create-group-form'); if(!f) return; const d=new FormData(f); showModalMessage(id,'Creando grupo...', null); fetch('../php/create_group.php',{method:'POST',body:d}).then(r=>r.json()).then(data=>{showModalMessage(id,data.message||(data.success?'Grupo creado con éxito':'Error al crear grupo'),data.success);if(data.success)f.reset();}).catch(e=>{console.error(e);showModalMessage(id,'Error de comunicación al crear grupo.',false);}); }
+        function submitDeleteUser(username) { const id='delete-user-modal'; showModalMessage(id,'Eliminando usuario...', null); const d=new FormData(); d.append('username',username); fetch('../php/delete_user.php',{method:'POST',body:d}).then(r=>r.json()).then(data=>{showModalMessage(id,data.message||(data.success?'Usuario eliminado con éxito':'Error al eliminar usuario'),data.success); if(data.success) setTimeout(()=>closeModal(id), 2500); else { clearModalMessage(id); /* Re-muestra botones de confirmación si falla */ confirmUserDeletion(username); } }).catch(e=>{console.error(e);showModalMessage(id,'Error de comunicación al eliminar usuario.',false); clearModalMessage(id); confirmUserDeletion(username); }); }
+        function submitDeleteGroup(groupName) { const id='delete-group-modal'; showModalMessage(id,'Eliminando grupo...', null); const d=new FormData(); d.append('group_name',groupName); fetch('../php/delete_group.php',{method:'POST',body:d}).then(r=>r.json()).then(data=>{showModalMessage(id,data.message||(data.success?'Grupo eliminado con éxito':'Error al eliminar grupo'),data.success); if(data.success) setTimeout(()=>closeModal(id), 2500); else { clearModalMessage(id); /* Re-muestra botones de confirmación si falla */ confirmGroupDeletion(groupName); } }).catch(e=>{console.error(e);showModalMessage(id,'Error de comunicación al eliminar grupo.',false); clearModalMessage(id); confirmGroupDeletion(groupName);}); }
+
+        // --- Manejadores de Eventos ---
+        function handleActionButtonClick(event) {
+            const btn = event.target.closest('.action-btn'); if(!btn) return;
+            const action = btn.dataset.action;
+            // Limpiar mensajes de error/éxito de modales anteriores (solo los de formularios)
+            document.querySelectorAll('[id$="-message"]').forEach(div => { div.textContent=''; div.style.display='none'; });
+            switch(action){
+                case 'create':        showCreateUserModal(); break;
+                case 'view':          fetchUsers('view'); break;
+                case 'modify':        fetchUsers('modify'); break;
+                case 'delete-user':   fetchUsers('delete'); break;
+                case 'create-group':  showCreateGroupModal(); break;
+                case 'view-groups':   fetchGroups('view'); break;
+                case 'delete-group':  fetchGroups('delete'); break;
+                case 'view-computers':fetchComputers(); break; // Llama a la función modificada
+                default: console.warn("Acción desconocida:", action);
+            }
+         }
+
+        // Listener General para botones de acción usando Delegación de Eventos
+         document.getElementById('dashboard-home').addEventListener('click', function(event) {
+              // Verifica si el clic fue en un botón con data-action dentro del contenedor de acciones
+              if (event.target.matches('.action-box-container .action-btn[data-action]')) {
+                  handleActionButtonClick(event);
+              }
+          });
+
+        // Listener para el botón home/logo (Volver al Dashboard)
+        document.getElementById('home-link').addEventListener('click',()=>{
+            const main=document.getElementById('main-content');
+            const ifr=main.querySelector('iframe');
+            if(ifr) ifr.remove(); // Elimina el iframe si existe
+            let home=document.getElementById('dashboard-home');
+            if(!home){
+                // Si la sección home fue eliminada por error, recargar es la opción más simple
+                console.warn("Sección #dashboard-home no encontrada. Recargando página.");
+                window.location.reload();
+            } else {
+                home.style.display = 'block'; // Muestra la sección principal del dashboard
+             }
+         });
+
+        // Listeners específicos para Prometheus/Grafana/FOG (si no usan data-action)
+        document.addEventListener('DOMContentLoaded', () => {
+            const promBtn = document.getElementById('prometheus-action-btn');
+            if (promBtn) {
+                promBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const main = document.getElementById("main-content");
+                    const home = document.getElementById("dashboard-home");
+                    if (home) home.style.display = 'none';
+                    const oldIframe = main.querySelector('iframe');
+                    if (oldIframe) oldIframe.remove();
+                    main.insertAdjacentHTML('beforeend', '<iframe src="http://192.168.1.6:9090" title="Prometheus" style="width:100%;height:calc(100vh - 60px);border:none;"></iframe>');
+                });
+            }
+
+            const grafBtn = document.getElementById('grafana-action-btn');
+            if (grafBtn) {
+                grafBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const main = document.getElementById("main-content");
+                    const home = document.getElementById("dashboard-home");
+                    if (home) home.style.display = 'none';
+                    const oldIframe = main.querySelector('iframe');
+                    if (oldIframe) oldIframe.remove();
+                    main.insertAdjacentHTML('beforeend', '<iframe src="http://192.168.1.6:3000" title="Grafana" style="width:100%;height:calc(100vh - 60px);border:none;"></iframe>');
+                });
+            }
+
+            // START: Added listener for FOG Button
+            const fogBtn = document.getElementById('fog-action-btn');
+            if (fogBtn) {
+                fogBtn.addEventListener('click', (e) => {
+                    e.preventDefault(); // Prevent default button action
+                    const main = document.getElementById("main-content");
+                    const home = document.getElementById("dashboard-home");
+                    // !!! IMPORTANT: Replace with your actual FOG server URL !!!
+                    const fogUrl = 'http://YOUR_FOG_SERVER_IP/fog/management';
+
+                    if (home) home.style.display = 'none'; // Hide the main dashboard content
+                    const oldIframe = main.querySelector('iframe');
+                    if (oldIframe) oldIframe.remove(); // Remove any existing iframe
+
+                    // Create and insert the new iframe for FOG
+                    main.insertAdjacentHTML('beforeend',
+                        `<iframe src="${fogUrl}" title="FOG Project" style="width:100%;height:calc(100vh - 60px);border:none;"></iframe>`
+                    );
+                });
+            }
+            // END: Added listener for FOG Button
+
+
+             // Carga inicial del tema
+             const isDark = getCookie('theme') === 'dark';
+             document.body.classList.toggle('dark-mode', isDark);
+             const themeSwitch = document.getElementById('theme-switch');
+             if(themeSwitch) themeSwitch.checked = isDark;
+         });
+
+
+        // Theme Toggle Switch
+        const themeSwitch = document.getElementById('theme-switch');
+        if(themeSwitch) {
+             themeSwitch.addEventListener('change', function(){
+                 const isDark=this.checked;
+                 document.body.classList.toggle('dark-mode', isDark);
+                 setCookie('theme',isDark?'dark':'light',30);
+                 // Actualizar tema en modales abiertos
+                 document.querySelectorAll('.modal').forEach(m=>{
+                     if(m.style.display==='block') {
+                         m.classList.toggle('dark-mode',isDark);
+                     }
+                 });
+             });
+        }
+
+        // User Dropdown Menu
+         const userNameBtn = document.getElementById('user-name-btn');
+         if(userNameBtn) {
+             userNameBtn.addEventListener('click', e => {
+                 e.stopPropagation(); // Evita que el click se propague al window
+                 document.getElementById('user-dropdown').classList.toggle('show');
+             });
+         }
+
+        // Cerrar dropdown si se hace clic fuera
+        window.addEventListener('click', e => {
+            const dropdown = document.getElementById('user-dropdown');
+            if (dropdown && dropdown.classList.contains('show')) {
+                 if (!e.target.matches('#user-name-btn') && !dropdown.contains(e.target)){
+                     dropdown.classList.remove('show');
+                 }
+            }
+        });
+
+        // Cerrar modales y dropdown con la tecla Escape
+        window.addEventListener('keydown', e => {
+            if (e.key === 'Escape' || e.key === 'Esc') {
+                // Cerrar todos los modales abiertos
+                document.querySelectorAll('.modal').forEach(modal => {
+                    if (modal.style.display === 'block') {
+                        // Usar closeModal que tiene el setTimeout para removerlo del DOM
+                        closeModal(modal.id);
+                    }
+                });
+                // Cerrar dropdown de usuario
+                const dropdown = document.getElementById('user-dropdown');
+                if (dropdown && dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        });
+
+    </script>
+
+</body>
+</html>
